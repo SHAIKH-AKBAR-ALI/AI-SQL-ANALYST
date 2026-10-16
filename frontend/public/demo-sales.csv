@@ -1,0 +1,7 @@
+date,product,quantity,unit,unit_price,amount
+2026-09-30,Milk,10,litre,60,600
+2026-10-01,Milk,12.5,litre,60,750
+2026-10-01,Potato,8,kg,30,240
+2026-10-15,Milk,5,litre,60,300
+2026-10-15,Notebook,3,piece,,150
+2026-11-01,Potato,2,kg,30,60

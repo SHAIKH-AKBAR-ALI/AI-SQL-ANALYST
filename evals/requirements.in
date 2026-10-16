@@ -1,0 +1,7 @@
+# Offline evaluation only; do not install into the API runtime environment.
+-r ../backend/requirements.txt
+ragas==0.4.3
+# Ragas still imports the legacy VertexAI shim removed in community 0.4.2.
+langchain-community==0.4.1
+instructor==1.11.3
+openai==1.109.1

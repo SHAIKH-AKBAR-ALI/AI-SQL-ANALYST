@@ -1,0 +1,19 @@
+{
+  "name": "hisaabai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "powershell -NoProfile -File scripts/backend.ps1",
+    "build": "npm --prefix frontend run build",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "test:backend": "powershell -NoProfile -File scripts/backend.ps1 -Test",
+    "test:frontend": "node --test frontend/tests/result-data.test.mjs"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "supabase": "2.121.0"
+  }
+}
