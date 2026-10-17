@@ -36,7 +36,17 @@ export default function AuthPanel({ onSession }: { onSession: (session: Session 
         : await supabase.auth.signInWithPassword({ email, password });
       setPassword("");
       if (error) setMessage(error.message);
-      else if (creatingAccount && !data.session) setMessage("Account created. Check your email to confirm it, then sign in.");
+      else if (creatingAccount) {
+        setCreatingAccount(false);
+        if (data.session) {
+          const { error: signOutError } = await supabase.auth.signOut();
+          setMessage(signOutError
+            ? "Account created, but sign-out failed. Sign out before logging in again."
+            : "Account created. Please sign in with your new account.");
+        } else {
+          setMessage("Account created. Confirm your email, then sign in.");
+        }
+      }
     } catch {
       setMessage("Supabase Auth is unreachable. Check your connection and try again.");
     } finally { setBusy(false); }
