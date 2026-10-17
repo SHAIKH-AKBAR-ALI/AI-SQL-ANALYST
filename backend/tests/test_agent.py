@@ -8,7 +8,7 @@ from groq import APITimeoutError, RateLimitError
 from pydantic import ValidationError
 
 from app.agent import (Explanation, Proposal, QuestionRequest, Review, ask_demo,
-                       call_model, render_explanation)
+                       call_model, explanation_cells, render_explanation, verified_summary)
 from app.main import app
 from app.sql_executor import QueryError
 
@@ -124,10 +124,45 @@ class AgentTests(unittest.TestCase):
 
     def test_unverifiable_or_unavailable_explanation_preserves_table(self):
         for output in ({'template': 'Sales were 9999 INR.'}, {'template': 'Sales {r2c0}'}, ValueError('bad JSON')):
-            response, _, _ = self.run_agent([proposal(), {'decision': 'approve', 'message': 'Correct'}, output])
+            response, model, _ = self.run_agent([proposal(), {'decision': 'approve', 'message': 'Correct'}, output])
             self.assertEqual(response['result']['rows'], [['1440.00']])
-            self.assertEqual(response['explanation_source'], 'table_fallback')
+            self.assertEqual(response['explanation_source'], 'result_summary')
+            self.assertIn('Revenue: 1440.00', response['answer'])
+            self.assertNotIn('9999', response['answer'])
+            self.assertEqual(response['evidence'][0]['value'], '1440.00')
+            self.assertEqual(len(model.calls), 3)
             self.assertIsNotNone(response['warning'])
+
+    def test_explanation_receives_explicit_cells_without_sql_date_literals(self):
+        response, model, _ = self.run_agent([
+            proposal(), {'decision': 'approve', 'message': 'Correct'},
+            {'template': 'Revenue for the requested period is {r0c0} INR.'},
+        ])
+        import json
+        payload = json.loads(model.calls[-1][1][1][1])
+        self.assertEqual(payload['cells'], [{'reference': '{r0c0}', 'column': 'revenue', 'value': '1440.00'}])
+        self.assertNotIn('candidate', payload)
+        self.assertFalse(payload['partial_results'])
+        self.assertEqual(response['explanation_source'], 'model')
+        self.assertIsNone(response['warning'])
+
+    def test_grouped_fallback_preserves_precision_null_and_partial_scope(self):
+        result = {**RESULT, 'columns': ['product_name', 'revenue'],
+                  'rows': [['Milk', '9007199254740993.01'], ['Notebook', None]], 'truncated': True}
+        answer, evidence = verified_summary(result)
+        self.assertIn('Product name: Milk; Revenue: 9007199254740993.01', answer)
+        self.assertIn('Revenue: unavailable', answer)
+        self.assertIn('displayed results', answer)
+        self.assertNotIn('total', answer.lower())
+        self.assertEqual(evidence[1]['value'], '9007199254740993.01')
+        self.assertEqual(explanation_cells(result)[2]['reference'], '{r1c0}')
+
+    def test_explanation_provider_failure_gets_readable_fallback(self):
+        failure = APITimeoutError(request=httpx.Request('POST', 'https://api.groq.com'))
+        response, model, _ = self.run_agent([proposal(), {'decision': 'approve', 'message': 'Correct'}, failure])
+        self.assertIn('1440.00', response['answer'])
+        self.assertIn('unavailable', response['warning'])
+        self.assertEqual(len(model.calls), 3)
 
     def test_renderer_preserves_exact_values_and_rejects_missing_evidence(self):
         result = {**RESULT, 'columns': ['value', 'name'], 'rows': [['9007199254740993.01', '<script>data</script>']]}
