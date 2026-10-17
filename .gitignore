@@ -28,3 +28,13 @@ uploads/
 backups/
 *.dump
 *.bak
+
+# Local video projects and generated media.
+demo_video/
+promo_video/
+temp_hyperframes/
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[wW][eE][bB][mM]
+*.[wW][aA][vV]
+*.[mM][pP]3
