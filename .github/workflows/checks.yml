@@ -29,7 +29,7 @@ jobs:
           python-version: '3.12'
       - run: npm ci
       - run: npm ci --prefix frontend
-      - name: Reject local files and Markdown in Git
+      - name: Reject local files and private Markdown in Git
         run: |
           python - <<'PY'
           import subprocess
@@ -37,7 +37,7 @@ jobs:
           paths = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
           for name in filter(None, paths):
               path = PurePosixPath(name)
-              assert path.suffix.lower() != '.md', f'Markdown must stay local: {name}'
+              assert path.suffix.lower() != '.md' or name == 'README.md', f'Only root README.md may be published: {name}'
               assert not any(part in {'.venv', '.tmp', 'node_modules', '.next', '.vercel', '__pycache__', 'uploads', 'backups'} for part in path.parts), f'Local file tracked: {name}'
               assert not (path.name.startswith('.env') and path.name != '.env.example'), f'Environment file tracked: {name}'
           PY
